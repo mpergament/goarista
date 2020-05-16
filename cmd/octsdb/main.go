@@ -136,16 +136,36 @@ func pushToOpenTSDB(addr string, conn OpenTSDBConn, config *Config, notif *pb.No
 	}
 	prefix := gnmi.StrPath(notif.Prefix)
 	for _, update := range notif.Update {
-		value := parseValue(update)
-		if value == nil {
-			continue
-		}
 		path := prefix + gnmi.StrPath(update.Path)
-		metricName, tags := config.Match(path)
+		metricName, tags, staticValueMap := config.Match(path)
+
+		rewriteflag := false
+		if (len(staticValueMap) > 0) {
+			glog.Info("StaticValueMap defined!")
+			// initvalue, err := gnmi.ExtractValue(update)
+			// value := staticValueMap[initvalue]
+			rewriteflag = true
+		} 
+			
+		value := parseValue(update)
+		if value == nil && rewriteflag == false {
+			continue
+		} else {
+			initvalue, err := gnmi.ExtractValue(update)
+			if err != nil {
+				glog.Fatalf("Malformed JSON update %q in %s", update.Val.GetJsonVal(), update)
+			}
+			if status, ok := initvalue.(string); ok {
+				glog.Info("Init value: %s", status)
+				value =  []interface{}{staticValueMap[status]}
+			}
+		}
+
 		if metricName == "" {
 			glog.V(8).Infof("Ignoring unmatched update at %s with value %+v", path, value)
 			continue
 		}
+		glog.Info("METRIC NAME: %s", metricName)
 		tags["host"] = host
 		for i, v := range value {
 			if len(value) > 1 {
