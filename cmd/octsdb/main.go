@@ -138,9 +138,9 @@ func pushToOpenTSDB(addr string, conn OpenTSDBConn, config *Config, notif *pb.No
 	for _, update := range notif.Update {
 		path := prefix + gnmi.StrPath(update.Path)
 		metricName, tags, staticValueMap := config.Match(path)
-			
+
 		value := parseValue(update, &staticValueMap)
-		if value == nil  {
+		if value == nil {
 			continue
 		}
 
@@ -177,7 +177,7 @@ func parseValue(update *pb.Update, staticValueMap *map[string]int64) []interface
 	}
 
 	rewriteflag := false
-	if (len(*staticValueMap) > 0) {
+	if len(*staticValueMap) > 0 {
 		rewriteflag = true
 	}
 

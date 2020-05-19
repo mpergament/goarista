@@ -60,7 +60,10 @@ func loadConfig(path string) (*Config, error) {
 // Match applies this config to the given OpenConfig path.
 // If the path doesn't match anything in the config, an empty string
 // is returned as the metric name.
-func (c *Config) Match(path string) (metricName string, tags map[string]string, staticValueMap map[string]int64) {
+func (c *Config) Match(path string) (
+	metricName string,
+	tags map[string]string,
+	staticValueMap map[string]int64) {
 	tags = make(map[string]string)
 	staticValueMap = make(map[string]int64)
 

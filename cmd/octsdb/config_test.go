@@ -65,7 +65,7 @@ func TestConfig(t *testing.T) {
 		tags:   map[string]string{"intf": "Ethernet42", "direction": "out"},
 	}}
 	for i, tcase := range testcases {
-		actualMetric, actualTags := cfg.Match(tcase.path)
+		actualMetric, actualTags, _ := cfg.Match(tcase.path)
 		if actualMetric != tcase.metric {
 			t.Errorf("#%d expected metric %q but got %q", i, tcase.metric, actualMetric)
 		}
