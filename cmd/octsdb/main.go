@@ -138,17 +138,14 @@ func pushToOpenTSDB(addr string, conn OpenTSDBConn, config *Config, notif *pb.No
 	for _, update := range notif.Update {
 		path := prefix + gnmi.StrPath(update.Path)
 		metricName, tags, staticValueMap := config.Match(path)
-
-		value := parseValue(update, &staticValueMap)
+		if metricName == "" {
+			glog.V(8).Infof("Ignoring unmatched update at %s ", path)
+			continue
+		}
+		value := parseValue(update, staticValueMap)
 		if value == nil {
 			continue
 		}
-
-		if metricName == "" {
-			glog.V(8).Infof("Ignoring unmatched update at %s with value %+v", path, value)
-			continue
-		}
-
 		tags["host"] = host
 		for i, v := range value {
 			if len(value) > 1 {
@@ -170,16 +167,13 @@ func pushToOpenTSDB(addr string, conn OpenTSDBConn, config *Config, notif *pb.No
 // parseValue returns either an integer/floating point value of the given update, or if
 // the value is a slice of integers/floating point values. If the value is neither of these
 // or if any element in the slice is non numerical, parseValue returns nil.
-func parseValue(update *pb.Update, staticValueMap *map[string]int64) []interface{} {
+func parseValue(update *pb.Update, staticValueMap map[string]int64) []interface{} {
 	value, err := gnmi.ExtractValue(update)
 	if err != nil {
 		glog.Fatalf("Malformed JSON update %q in %s", update.Val.GetJsonVal(), update)
 	}
 
-	rewriteflag := false
-	if len(*staticValueMap) > 0 {
-		rewriteflag = true
-	}
+	rewriteFlag := len(staticValueMap) > 0
 
 	switch value := value.(type) {
 	case int64:
@@ -218,12 +212,8 @@ func parseValue(update *pb.Update, staticValueMap *map[string]int64) []interface
 					value[i] = parseNumber(num, update)
 				}
 			case string:
-				if rewriteflag == true {
-					if newval, ok := (*staticValueMap)[val]; ok {
-						return []interface{}{newval}
-					} else if newval, ok := (*staticValueMap)["default"]; ok {
-						return []interface{}{newval}
-					}
+				if rewriteFlag {
+					return parseString(val, staticValueMap)
 				}
 			default:
 				// If any value is not a number, skip it.
@@ -239,17 +229,23 @@ func parseValue(update *pb.Update, staticValueMap *map[string]int64) []interface
 			return []interface{}{parseNumber(val, update)}
 		}
 	case string:
-		if rewriteflag == true {
-			if newval, ok := (*staticValueMap)[value]; ok {
-				return []interface{}{newval}
-			} else if newval, ok := (*staticValueMap)["default"]; ok {
-				return []interface{}{newval}
-			}
+		if rewriteFlag {
+			return parseString(value, staticValueMap)
 		}
 	default:
 		glog.V(9).Infof("Ignoring non-numeric or non-numeric slice value in %s", update)
 	}
 	return nil
+}
+
+func parseString(value string, staticValueMap map[string]int64) []interface{} {
+	if newval, ok := (staticValueMap)[value]; ok {
+		return []interface{}{newval}
+	} else if newval, ok := (staticValueMap)["default"]; ok {
+		return []interface{}{newval}
+	} else {
+		return nil
+	}
 }
 
 // Convert our json.Number to either an int64, uint64, or float64.

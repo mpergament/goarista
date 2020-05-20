@@ -21,9 +21,10 @@ func TestConfig(t *testing.T) {
 	}
 
 	testcases := []struct {
-		path   string
-		metric string
-		tags   map[string]string
+		path           string
+		metric         string
+		tags           map[string]string
+		staticValueMap map[string]int64
 	}{{
 		path:   "/Sysdb/environment/cooling/status/fan/Fan1/1/speed/value",
 		metric: "eos.fanspeed.environment.fan.speed",
@@ -63,14 +64,25 @@ func TestConfig(t *testing.T) {
 			"Ethernet42/intfCounter/current/ethStatistics/outPfcClassFrames",
 		metric: "eos.intfpfcclasscounter.interface.pfcclassframes",
 		tags:   map[string]string{"intf": "Ethernet42", "direction": "out"},
+	}, {
+		path: "/Sysdb/interface/status/eth/phy/slice/1/intfStatus/" +
+			"(?P<intf>.+)/operStatus$",
+		staticValueMap: map[string]int64{"intfOperUp": 1, "intfOperDown": 0, "default": 0},
 	}}
+
 	for i, tcase := range testcases {
-		actualMetric, actualTags, _ := cfg.Match(tcase.path)
+		actualMetric, actualTags, staticValueMap := cfg.Match(tcase.path)
 		if actualMetric != tcase.metric {
 			t.Errorf("#%d expected metric %q but got %q", i, tcase.metric, actualMetric)
 		}
 		if d := test.Diff(tcase.tags, actualTags); actualMetric != "" && d != "" {
 			t.Errorf("#%d expected tags %q but got %q: %s", i, tcase.tags, actualTags, d)
+		}
+		if len(staticValueMap) > 0 {
+			if d := test.Diff(tcase.staticValueMap, staticValueMap); d != "" {
+				t.Errorf("#%d expected staticValueMap %q but got %q", i, tcase.staticValueMap,
+					staticValueMap)
+			}
 		}
 	}
 }

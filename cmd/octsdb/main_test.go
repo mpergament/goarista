@@ -39,13 +39,14 @@ func TestParseValue(t *testing.T) { // Because parsing JSON sucks.
 		{`[1,{"value":9},5,7,9]`, staticValueMap,
 			[]interface{}{int64(1), int64(9), int64(5), int64(7), int64(9)}},
 		{`"intfOperUp"`, map[string]int64{"intfOperUp": 1}, []interface{}{int64(1)}},
+		{`"default"`, map[string]int64{"default": 0}, []interface{}{int64(0)}},
 	}
 	for i, tcase := range testcases {
 		actual := parseValue(&pb.Update{
 			Val: &pb.TypedValue{
 				Value: &pb.TypedValue_JsonVal{JsonVal: []byte(tcase.input)},
 			},
-		}, &tcase.staticValueMap)
+		}, tcase.staticValueMap)
 		if d := test.Diff(tcase.expected, actual); d != "" {
 			t.Errorf("#%d: %s: %#v vs %#v", i, d, tcase.expected, actual)
 		}
