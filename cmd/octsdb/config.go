@@ -89,8 +89,8 @@ func (c *Config) Match(path string) (
 			tags[tag] = value
 		}
 
-		for initname, newname := range metric.StaticValueMap {
-			staticValueMap[initname] = newname
+		for initName, newName := range metric.StaticValueMap {
+			staticValueMap[initName] = newName
 		}
 		break
 	}

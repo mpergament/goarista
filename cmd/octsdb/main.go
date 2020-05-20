@@ -173,8 +173,6 @@ func parseValue(update *pb.Update, staticValueMap map[string]int64) []interface{
 		glog.Fatalf("Malformed JSON update %q in %s", update.Val.GetJsonVal(), update)
 	}
 
-	rewriteFlag := len(staticValueMap) > 0
-
 	switch value := value.(type) {
 	case int64:
 		return []interface{}{value}
@@ -212,9 +210,7 @@ func parseValue(update *pb.Update, staticValueMap map[string]int64) []interface{
 					value[i] = parseNumber(num, update)
 				}
 			case string:
-				if rewriteFlag {
-					return parseString(val, staticValueMap)
-				}
+				return parseString(val, staticValueMap)
 			default:
 				// If any value is not a number, skip it.
 				glog.V(3).Infof("Element %d: %v is %T, not json.Number", i, val, val)
@@ -229,9 +225,8 @@ func parseValue(update *pb.Update, staticValueMap map[string]int64) []interface{
 			return []interface{}{parseNumber(val, update)}
 		}
 	case string:
-		if rewriteFlag {
-			return parseString(value, staticValueMap)
-		}
+		return parseString(value, staticValueMap)
+
 	default:
 		glog.V(9).Infof("Ignoring non-numeric or non-numeric slice value in %s", update)
 	}
@@ -239,9 +234,9 @@ func parseValue(update *pb.Update, staticValueMap map[string]int64) []interface{
 }
 
 func parseString(value string, staticValueMap map[string]int64) []interface{} {
-	if newval, ok := (staticValueMap)[value]; ok {
+	if newval, ok := staticValueMap[value]; ok {
 		return []interface{}{newval}
-	} else if newval, ok := (staticValueMap)["default"]; ok {
+	} else if newval, ok := staticValueMap["default"]; ok {
 		return []interface{}{newval}
 	} else {
 		return nil
